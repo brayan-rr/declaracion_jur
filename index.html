@@ -412,23 +412,18 @@
 
         <div class="main-content">
             <div class="workflow-steps">
-                <div class="step" id="step1">
-                    <div class="step-number">1</div>
-                    <h3>Elementos Fijos Automáticos</h3>
-                    <p>Firma del asesor y sello se cargan automáticamente</p>
-                </div>
                 <div class="step" id="step2">
-                    <div class="step-number">2</div>
+                    <div class="step-number">1</div>
                     <h3>Subir Documento PDF</h3>
                     <p>Carga el documento base a procesar</p>
                 </div>
                 <div class="step" id="step3">
-                    <div class="step-number">3</div>
+                    <div class="step-number">2</div>
                     <h3>Firma del Cliente</h3>
                     <p>Agrega únicamente la firma del cliente</p>
                 </div>
                 <div class="step" id="step4">
-                    <div class="step-number">4</div>
+                    <div class="step-number">3</div>
                     <h3>Procesar y Descargar</h3>
                     <p>Obtén tu documento completado automáticamente</p>
                 </div>
@@ -443,19 +438,10 @@
                 </ul>
             </div>
 
-            <div class="upload-section" id="configSection">
-                <h2>⚙️ Configuración Automática</h2>
-                <p style="text-align: center; color: #28a745; font-weight: 500;">
-                    ✓ Elementos fijos cargados automáticamente desde el servidor
-                </p>
-                <div class="preview-area">
-                    <div class="preview-box" id="advisorPreview">
-                        <p>Cargando firma del asesor...</p>
-                    </div>
-                    <div class="preview-box" id="stampPreview">
-                        <p>Cargando sello...</p>
-                    </div>
-                </div>
+            <!-- Sección oculta para cargar elementos automáticamente -->
+            <div id="configSection" style="display: none;">
+                <div id="advisorPreview"></div>
+                <div id="stampPreview"></div>
             </div>
 
             <div class="upload-section" id="pdfSection">
@@ -525,8 +511,6 @@
         // Función para cargar imágenes fijas desde GitHub
         async function loadFixedImages() {
             try {
-                showStatus('Cargando firma del asesor y sello...', 'info');
-                
                 // Cargar firma del asesor
                 const advisorResponse = await fetch(GITHUB_ADVISOR_SIGNATURE_URL);
                 if (advisorResponse.ok) {
@@ -534,11 +518,6 @@
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         advisorSignature = e.target.result;
-                        const preview = document.getElementById('advisorPreview');
-                        preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Firma del Asesor">
-                                           <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Firma cargada automáticamente</p>`;
-                        preview.classList.add('has-content');
-                        updateSteps();
                         checkReadyToProcess();
                     };
                     reader.readAsDataURL(advisorBlob);
@@ -551,17 +530,12 @@
                     const reader = new FileReader();
                     reader.onload = function(e) {
                         stampImage = e.target.result;
-                        const preview = document.getElementById('stampPreview');
-                        preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Sello">
-                                           <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Sello cargado automáticamente</p>`;
-                        preview.classList.add('has-content');
-                        updateSteps();
                         checkReadyToProcess();
                     };
                     reader.readAsDataURL(stampBlob);
                 }
 
-                showStatus('¡Elementos fijos cargados! Ahora sube tu documento PDF.', 'success');
+                showStatus('¡Sistema listo! Sube tu documento PDF para comenzar.', 'success');
                 
             } catch (error) {
                 console.error('Error al cargar imágenes fijas:', error);
@@ -619,9 +593,7 @@
             const steps = document.querySelectorAll('.step');
             steps.forEach(step => step.classList.remove('active'));
 
-            if (advisorSignature && stampImage) {
-                document.getElementById('step1').classList.add('active');
-            }
+            // Solo actualizar pasos visibles
             if (pdfFile) {
                 document.getElementById('step2').classList.add('active');
             }
