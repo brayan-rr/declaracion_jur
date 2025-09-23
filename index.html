@@ -414,8 +414,8 @@
             <div class="workflow-steps">
                 <div class="step" id="step1">
                     <div class="step-number">1</div>
-                    <h3>Configurar Elementos Fijos</h3>
-                    <p>Sube la firma del asesor y el sello (solo una vez)</p>
+                    <h3>Elementos Fijos Automáticos</h3>
+                    <p>Firma del asesor y sello se cargan automáticamente</p>
                 </div>
                 <div class="step" id="step2">
                     <div class="step-number">2</div>
@@ -444,27 +444,16 @@
             </div>
 
             <div class="upload-section" id="configSection">
-                <h2>⚙️ Configuración Inicial (Solo una vez)</h2>
-                <div class="file-input-group">
-                    <div class="file-input">
-                        <input type="file" id="advisorSignature" accept="image/*">
-                        <label for="advisorSignature" class="file-input-button advisor">
-                            👩‍💼 Subir Firma del Asesor
-                        </label>
-                    </div>
-                    <div class="file-input">
-                        <input type="file" id="stampFile" accept="image/*">
-                        <label for="stampFile" class="file-input-button advisor">
-                            🏷️ Subir Sello
-                        </label>
-                    </div>
-                </div>
+                <h2>⚙️ Configuración Automática</h2>
+                <p style="text-align: center; color: #28a745; font-weight: 500;">
+                    ✓ Elementos fijos cargados automáticamente desde el servidor
+                </p>
                 <div class="preview-area">
                     <div class="preview-box" id="advisorPreview">
-                        <p>Firma del asesor aparecerá aquí</p>
+                        <p>Cargando firma del asesor...</p>
                     </div>
                     <div class="preview-box" id="stampPreview">
-                        <p>Sello aparecerá aquí</p>
+                        <p>Cargando sello...</p>
                     </div>
                 </div>
             </div>
@@ -474,7 +463,7 @@
                 <div class="file-input">
                     <input type="file" id="pdfFile" accept=".pdf">
                     <label for="pdfFile" class="file-input-button">
-                        📎 Seleccionar Documento PDF
+                        🔎 Seleccionar Documento PDF
                     </label>
                 </div>
                 <div class="preview-area">
@@ -485,11 +474,11 @@
             </div>
 
             <div class="upload-section" id="clientSection" style="display: none;">
-                <h2>✍️ Firma del Cliente</h2>
+                <h2>✏️ Firma del Cliente</h2>
                 <div class="file-input">
                     <input type="file" id="clientSignature" accept="image/*">
                     <label for="clientSignature" class="file-input-button client">
-                        📝 Subir Firma del Cliente
+                        🔏 Subir Firma del Cliente
                     </label>
                 </div>
                 <div class="preview-area">
@@ -523,53 +512,68 @@
         let clientSignature = null;
         let processedPdfBlob = null;
 
+        // URLs de las imágenes fijas en GitHub
+        const GITHUB_ADVISOR_SIGNATURE_URL = 'https://raw.githubusercontent.com/brayan-rr/procesador-pdf/main/firma_ase.jpeg';
+        const GITHUB_STAMP_URL = 'https://raw.githubusercontent.com/brayan-rr/procesador-pdf/main/sello.png';
+
         // Datos fijos del asesor
         const advisorData = {
             name: "KATHERIN FIORELLA ABISRROR MORALES",
             id: "60956705"
         };
 
+        // Función para cargar imágenes fijas desde GitHub
+        async function loadFixedImages() {
+            try {
+                showStatus('Cargando firma del asesor y sello...', 'info');
+                
+                // Cargar firma del asesor
+                const advisorResponse = await fetch(GITHUB_ADVISOR_SIGNATURE_URL);
+                if (advisorResponse.ok) {
+                    const advisorBlob = await advisorResponse.blob();
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        advisorSignature = e.target.result;
+                        const preview = document.getElementById('advisorPreview');
+                        preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Firma del Asesor">
+                                           <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Firma cargada automáticamente</p>`;
+                        preview.classList.add('has-content');
+                        updateSteps();
+                        checkReadyToProcess();
+                    };
+                    reader.readAsDataURL(advisorBlob);
+                }
+
+                // Cargar sello
+                const stampResponse = await fetch(GITHUB_STAMP_URL);
+                if (stampResponse.ok) {
+                    const stampBlob = await stampResponse.blob();
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        stampImage = e.target.result;
+                        const preview = document.getElementById('stampPreview');
+                        preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Sello">
+                                           <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Sello cargado automáticamente</p>`;
+                        preview.classList.add('has-content');
+                        updateSteps();
+                        checkReadyToProcess();
+                    };
+                    reader.readAsDataURL(stampBlob);
+                }
+
+                showStatus('¡Elementos fijos cargados! Ahora sube tu documento PDF.', 'success');
+                
+            } catch (error) {
+                console.error('Error al cargar imágenes fijas:', error);
+                showStatus('Error al cargar elementos fijos. Verifica la conexión a internet.', 'error');
+            }
+        }
+
         // Event listeners
-        document.getElementById('advisorSignature').addEventListener('change', handleAdvisorSignature);
-        document.getElementById('stampFile').addEventListener('change', handleStampFile);
         document.getElementById('pdfFile').addEventListener('change', handlePdfFile);
         document.getElementById('clientSignature').addEventListener('change', handleClientSignature);
         document.getElementById('processButton').addEventListener('click', processPdf);
         document.getElementById('downloadButton').addEventListener('click', downloadPdf);
-
-        function handleAdvisorSignature(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    advisorSignature = e.target.result;
-                    const preview = document.getElementById('advisorPreview');
-                    preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Firma del Asesor">
-                                       <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Firma cargada</p>`;
-                    preview.classList.add('has-content');
-                    updateSteps();
-                    checkReadyToProcess();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function handleStampFile(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    stampImage = e.target.result;
-                    const preview = document.getElementById('stampPreview');
-                    preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Sello">
-                                       <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Sello cargado</p>`;
-                    preview.classList.add('has-content');
-                    updateSteps();
-                    checkReadyToProcess();
-                };
-                reader.readAsDataURL(file);
-            }
-        }
 
         function handlePdfFile(event) {
             const file = event.target.files[0];
@@ -756,21 +760,21 @@
                 // Las coordenadas en PDF-lib van de abajo hacia arriba
                 
                 // Firma del cliente (lado izquierdo, sobre la línea correspondiente)
-                const clientSigWidth = 180; // Aumentado más
-                const clientSigHeight = 100; // Aumentado más
+                const clientSigWidth = 220; // Aumentado considerablemente
+                const clientSigHeight = 120; // Aumentado considerablemente
                 firstPage.drawImage(clientImg, {
-                    x: 80, // Posición X fija
-                    y: 180, // Ajustado para estar justo sobre la línea
+                    x: 70, // Posición X ajustada
+                    y: 175, // Ajustado para estar justo sobre la línea
                     width: clientSigWidth,
                     height: clientSigHeight,
                 });
 
                 // Firma del asesor (lado derecho, sobre la línea correspondiente)  
-                const advisorSigWidth = 180; // Aumentado más
-                const advisorSigHeight = 100; // Aumentado más
+                const advisorSigWidth = 220; // Aumentado considerablemente
+                const advisorSigHeight = 120; // Aumentado considerablemente
                 firstPage.drawImage(advisorImg, {
-                    x: 350, // Posición X ajustada para estar centrada en la columna derecha
-                    y: 180, // Misma altura que la firma del cliente
+                    x: 340, // Posición X ajustada para estar centrada en la columna derecha
+                    y: 175, // Misma altura que la firma del cliente
                     width: advisorSigWidth,
                     height: advisorSigHeight,
                 });
@@ -778,7 +782,7 @@
                 // Agregar datos del asesor (texto)
                 // Nombre del asesor
                 firstPage.drawText('KATHERIN FIORELLA ABISRROR MORALES', {
-                    x: 350,
+                    x: 340,
                     y: 140, // Debajo de la firma
                     size: 9,
                     font: helveticaFont,
@@ -787,7 +791,7 @@
 
                 // Código del asesor
                 firstPage.drawText('SYSTEM    60956705', {
-                    x: 350,
+                    x: 340,
                     y: 125, // Debajo del nombre
                     size: 9,
                     font: helveticaFont,
@@ -795,13 +799,10 @@
                 });
 
                 // Sello (esquina inferior derecha, más grande)
-                const stampSize = 120; // Aumentado aún más
+                const stampSize = 140; // Aumentado considerablemente
                 firstPage.drawImage(stampImg, {
-                    x: pageWidth - 150, // Más alejado del borde
-                    y: 50, // Posición Y fija desde abajo
-                    width: stampSize,
-                    height: stampSize,
-                });
+                    x: pageWidth - 160, // Más espacio del borde
+                    y: 40, // Posición Y ajustada
                     width: stampSize,
                     height: stampSize,
                 });
@@ -876,7 +877,10 @@
 
         // Inicialización
         document.addEventListener('DOMContentLoaded', function() {
-            showStatus('¡Listo! Comienza subiendo la firma del asesor y el sello.', 'info');
+            showStatus('Inicializando aplicación...', 'info');
+            
+            // Cargar imágenes fijas automáticamente
+            loadFixedImages();
         });
     </script>
 </body>
