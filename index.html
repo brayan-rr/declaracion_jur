@@ -748,32 +748,60 @@
                 // Obtener dimensiones de la página
                 const { width: pageWidth, height: pageHeight } = firstPage.getSize();
 
-                // Posiciones ajustadas basadas en el documento ejemplo
-                // Firma del cliente (lado izquierdo)
-                const clientSigWidth = Math.min(120, pageWidth * 0.2);
-                const clientSigHeight = 60;
+                // Embed de fuentes para el texto
+                const helveticaFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
+                const helveticaBold = await pdfDoc.embedFont(PDFLib.StandardFonts.HelveticaBold);
+
+                // Posiciones precisas basadas en el documento real
+                // Las coordenadas en PDF-lib van de abajo hacia arriba
+                
+                // Firma del cliente (lado izquierdo, sobre la línea correspondiente)
+                const clientSigWidth = 180; // Aumentado más
+                const clientSigHeight = 100; // Aumentado más
                 firstPage.drawImage(clientImg, {
-                    x: 80,
-                    y: pageHeight - 720, // Ajustar según la altura de la página
+                    x: 80, // Posición X fija
+                    y: 180, // Ajustado para estar justo sobre la línea
                     width: clientSigWidth,
                     height: clientSigHeight,
                 });
 
-                // Firma del asesor (lado derecho)  
-                const advisorSigWidth = Math.min(120, pageWidth * 0.2);
-                const advisorSigHeight = 60;
+                // Firma del asesor (lado derecho, sobre la línea correspondiente)  
+                const advisorSigWidth = 180; // Aumentado más
+                const advisorSigHeight = 100; // Aumentado más
                 firstPage.drawImage(advisorImg, {
-                    x: pageWidth - 200,
-                    y: pageHeight - 720,
+                    x: 350, // Posición X ajustada para estar centrada en la columna derecha
+                    y: 180, // Misma altura que la firma del cliente
                     width: advisorSigWidth,
                     height: advisorSigHeight,
                 });
 
-                // Sello (esquina inferior derecha)
-                const stampSize = Math.min(80, pageWidth * 0.1);
+                // Agregar datos del asesor (texto)
+                // Nombre del asesor
+                firstPage.drawText('KATHERIN FIORELLA ABISRROR MORALES', {
+                    x: 350,
+                    y: 140, // Debajo de la firma
+                    size: 9,
+                    font: helveticaFont,
+                    color: PDFLib.rgb(0, 0, 0),
+                });
+
+                // Código del asesor
+                firstPage.drawText('SYSTEM    60956705', {
+                    x: 350,
+                    y: 125, // Debajo del nombre
+                    size: 9,
+                    font: helveticaFont,
+                    color: PDFLib.rgb(0, 0, 0),
+                });
+
+                // Sello (esquina inferior derecha, más grande)
+                const stampSize = 120; // Aumentado aún más
                 firstPage.drawImage(stampImg, {
-                    x: pageWidth - 120,
-                    y: pageHeight - 800,
+                    x: pageWidth - 150, // Más alejado del borde
+                    y: 50, // Posición Y fija desde abajo
+                    width: stampSize,
+                    height: stampSize,
+                });
                     width: stampSize,
                     height: stampSize,
                 });
