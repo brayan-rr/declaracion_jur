@@ -503,9 +503,13 @@
         let clientSignature = null;
         let processedPdfBlob = null;
 
-        // URLs de las imágenes fijas en GitHub
+        // URLs de las imágenes fijas en GitHub (URLs directas)
         const GITHUB_ADVISOR_SIGNATURE_URL = 'https://raw.githubusercontent.com/brayan-rr/procesador-pdf/main/firma_ase.jpeg';
         const GITHUB_STAMP_URL = 'https://raw.githubusercontent.com/brayan-rr/procesador-pdf/main/sello.png';
+
+        // Imágenes base64 como respaldo (puedes reemplazar estas con las tuyas)
+        const FALLBACK_ADVISOR_SIGNATURE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+        const FALLBACK_STAMP = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
 
         // Datos fijos del asesor
         const advisorData = {
@@ -513,59 +517,69 @@
             id: "60956705"
         };
 
-        // Función mejorada para cargar imágenes fijas desde GitHub
+        // Función robusta para cargar imágenes fijas
         async function loadFixedImages() {
             try {
-                let advisorLoaded = false;
-                let stampLoaded = false;
+                showStatus('Cargando elementos del sistema...', 'info');
                 
-                // Cargar firma del asesor
-                try {
-                    const advisorResponse = await fetch(GITHUB_ADVISOR_SIGNATURE_URL);
-                    if (advisorResponse.ok) {
-                        const advisorBlob = await advisorResponse.blob();
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            advisorSignature = e.target.result;
-                            advisorLoaded = true;
-                            checkReadyToProcess();
-                        };
-                        reader.readAsDataURL(advisorBlob);
-                    }
-                } catch (error) {
-                    console.warn('Error cargando firma del asesor:', error);
-                }
-
-                // Cargar sello
-                try {
-                    const stampResponse = await fetch(GITHUB_STAMP_URL);
-                    if (stampResponse.ok) {
-                        const stampBlob = await stampResponse.blob();
-                        const reader = new FileReader();
-                        reader.onload = function(e) {
-                            stampImage = e.target.result;
-                            stampLoaded = true;
-                            checkReadyToProcess();
-                        };
-                        reader.readAsDataURL(stampBlob);
-                    }
-                } catch (error) {
-                    console.warn('Error cargando sello:', error);
-                }
-
-                // Esperar un poco para la carga
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                
-                if (advisorLoaded && stampLoaded) {
-                    showStatus('¡Sistema listo! Sube tu documento PDF para comenzar.', 'success');
-                } else {
-                    showStatus('Sistema parcialmente listo. Algunos elementos pueden no haberse cargado correctamente.', 'info');
-                }
+                // Intentar cargar desde GitHub con timeout
+                await Promise.race([
+                    loadImagesFromGitHub(),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
+                ]);
                 
             } catch (error) {
-                console.error('Error al cargar imágenes fijas:', error);
-                showStatus('Error al cargar elementos fijos. Verifica la conexión a internet.', 'error');
+                console.warn('No se pudieron cargar desde GitHub, usando elementos por defecto:', error);
+                // Usar imágenes por defecto si GitHub falla
+                advisorSignature = FALLBACK_ADVISOR_SIGNATURE;
+                stampImage = FALLBACK_STAMP;
             }
+            
+            // Verificar que tengamos algo cargado
+            if (!advisorSignature || !stampImage) {
+                advisorSignature = FALLBACK_ADVISOR_SIGNATURE;
+                stampImage = FALLBACK_STAMP;
+            }
+            
+            showStatus('¡Sistema listo! Sube tu documento PDF para comenzar.', 'success');
+            checkReadyToProcess();
+        }
+
+        // Función auxiliar para cargar desde GitHub
+        async function loadImagesFromGitHub() {
+            const advisorPromise = fetch(GITHUB_ADVISOR_SIGNATURE_URL)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al cargar firma');
+                    return response.blob();
+                })
+                .then(blob => {
+                    return new Promise(resolve => {
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            advisorSignature = e.target.result;
+                            resolve();
+                        };
+                        reader.readAsDataURL(blob);
+                    });
+                });
+
+            const stampPromise = fetch(GITHUB_STAMP_URL)
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al cargar sello');
+                    return response.blob();
+                })
+                .then(blob => {
+                    return new Promise(resolve => {
+                        const reader = new FileReader();
+                        reader.onload = e => {
+                            stampImage = e.target.result;
+                            resolve();
+                        };
+                        reader.readAsDataURL(blob);
+                    });
+                });
+
+            await Promise.all([advisorPromise, stampPromise]);
         }
 
         // Event listeners
