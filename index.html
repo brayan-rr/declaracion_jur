@@ -638,6 +638,63 @@
             }
         }
 
+        // Función auxiliar para determinar el tipo de imagen y convertir si es necesario
+        async function embedImageToPdf(pdfDoc, imageDataUrl) {
+            try {
+                // Extraer el tipo de imagen del data URL
+                const imageType = imageDataUrl.split(';')[0].split(':')[1];
+                
+                // Convertir a base64
+                const base64Data = imageDataUrl.split(',')[1];
+                const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
+                
+                // Intentar embedPng primero
+                if (imageType === 'image/png') {
+                    return await pdfDoc.embedPng(imageBytes);
+                } else if (imageType === 'image/jpeg' || imageType === 'image/jpg') {
+                    return await pdfDoc.embedJpg(imageBytes);
+                } else {
+                    // Si no es PNG o JPG, intentar convertir usando canvas
+                    const convertedPng = await convertImageToPng(imageDataUrl);
+                    const convertedBytes = Uint8Array.from(atob(convertedPng.split(',')[1]), c => c.charCodeAt(0));
+                    return await pdfDoc.embedPng(convertedBytes);
+                }
+            } catch (error) {
+                console.error('Error al procesar imagen:', error);
+                // Intentar conversión a PNG como último recurso
+                try {
+                    const convertedPng = await convertImageToPng(imageDataUrl);
+                    const convertedBytes = Uint8Array.from(atob(convertedPng.split(',')[1]), c => c.charCodeAt(0));
+                    return await pdfDoc.embedPng(convertedBytes);
+                } catch (conversionError) {
+                    throw new Error('No se pudo procesar la imagen. Asegúrate de usar PNG o JPG.');
+                }
+            }
+        }
+
+        // Función para convertir cualquier imagen a PNG
+        function convertImageToPng(imageDataUrl) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    
+                    // Fondo blanco para transparencias
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    
+                    ctx.drawImage(img, 0, 0);
+                    resolve(canvas.toDataURL('image/png'));
+                };
+                img.onerror = reject;
+                img.src = imageDataUrl;
+            });
+        }
+
         async function processPdf() {
             try {
                 const button = document.getElementById('processButton');
@@ -647,9 +704,25 @@
                 
                 showStatus('Procesando documento PDF...', 'info');
 
+                // Validar que tenemos todos los elementos necesarios
+                if (!pdfFile) {
+                    throw new Error('No se ha cargado el archivo PDF');
+                }
+                if (!advisorSignature) {
+                    throw new Error('No se ha cargado la firma del asesor');
+                }
+                if (!clientSignature) {
+                    throw new Error('No se ha cargado la firma del cliente');
+                }
+                if (!stampImage) {
+                    throw new Error('No se ha cargado el sello');
+                }
+
+                showStatus('Cargando documento PDF...', 'info');
                 // Cargar el PDF existente
                 const existingPdfDoc = await PDFLib.PDFDocument.load(pdfFile);
                 
+                showStatus('Copiando páginas...', 'info');
                 // Crear nuevo documento
                 const pdfDoc = await PDFLib.PDFDocument.create();
                 
@@ -665,36 +738,47 @@
                 const pages = pdfDoc.getPages();
                 const firstPage = pages[0];
 
-                // Embed de las imágenes
-                const advisorImg = await pdfDoc.embedPng(advisorSignature);
-                const clientImg = await pdfDoc.embedPng(clientSignature);
-                const stampImg = await pdfDoc.embedPng(stampImage);
+                showStatus('Procesando imágenes...', 'info');
+                // Embed de las imágenes con manejo de errores mejorado
+                const advisorImg = await embedImageToPdf(pdfDoc, advisorSignature);
+                const clientImg = await embedImageToPdf(pdfDoc, clientSignature);
+                const stampImg = await embedImageToPdf(pdfDoc, stampImage);
 
-                // Posiciones fijas basadas en el documento ejemplo
+                showStatus('Agregando firmas y sello...', 'info');
+                // Obtener dimensiones de la página
+                const { width: pageWidth, height: pageHeight } = firstPage.getSize();
+
+                // Posiciones ajustadas basadas en el documento ejemplo
                 // Firma del cliente (lado izquierdo)
+                const clientSigWidth = Math.min(120, pageWidth * 0.2);
+                const clientSigHeight = 60;
                 firstPage.drawImage(clientImg, {
                     x: 80,
-                    y: 120,
-                    width: 120,
-                    height: 60,
+                    y: pageHeight - 720, // Ajustar según la altura de la página
+                    width: clientSigWidth,
+                    height: clientSigHeight,
                 });
 
                 // Firma del asesor (lado derecho)  
+                const advisorSigWidth = Math.min(120, pageWidth * 0.2);
+                const advisorSigHeight = 60;
                 firstPage.drawImage(advisorImg, {
-                    x: 430,
-                    y: 120,
-                    width: 120,
-                    height: 60,
+                    x: pageWidth - 200,
+                    y: pageHeight - 720,
+                    width: advisorSigWidth,
+                    height: advisorSigHeight,
                 });
 
                 // Sello (esquina inferior derecha)
+                const stampSize = Math.min(80, pageWidth * 0.1);
                 firstPage.drawImage(stampImg, {
-                    x: 450,
-                    y: 50,
-                    width: 80,
-                    height: 80,
+                    x: pageWidth - 120,
+                    y: pageHeight - 800,
+                    width: stampSize,
+                    height: stampSize,
                 });
 
+                showStatus('Generando PDF final...', 'info');
                 // Generar el PDF final
                 const pdfBytes = await pdfDoc.save();
                 processedPdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
@@ -708,8 +792,16 @@
                 showStatus('¡Documento procesado exitosamente!', 'success');
 
             } catch (error) {
-                console.error('Error al procesar PDF:', error);
-                showStatus('Error al procesar el documento: ' + error.message, 'error');
+                console.error('Error detallado al procesar PDF:', error);
+                let errorMessage = 'Error desconocido';
+                
+                if (error.message) {
+                    errorMessage = error.message;
+                } else if (error.toString) {
+                    errorMessage = error.toString();
+                }
+                
+                showStatus('Error al procesar el documento: ' + errorMessage, 'error');
             } finally {
                 const button = document.getElementById('processButton');
                 button.disabled = false;
