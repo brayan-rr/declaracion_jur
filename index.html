@@ -517,69 +517,144 @@
             id: "60956705"
         };
 
-        // Función robusta para cargar imágenes fijas
+        // Función robusta para cargar imágenes fijas con URLs corregidas
         async function loadFixedImages() {
             try {
                 showStatus('Cargando elementos del sistema...', 'info');
                 
-                // Intentar cargar desde GitHub con timeout
-                await Promise.race([
-                    loadImagesFromGitHub(),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 5000))
-                ]);
+                // Intentar múltiples URLs para las imágenes
+                const advisorUrls = [
+                    'https://raw.githubusercontent.com/brayan-rr/procesador-pdf/main/firma_ase.jpeg',
+                    'https://github.com/brayan-rr/procesador-pdf/raw/main/firma_ase.jpeg'
+                ];
+                
+                const stampUrls = [
+                    'https://raw.githubusercontent.com/brayan-rr/procesador-pdf/main/sello.png',
+                    'https://github.com/brayan-rr/procesador-pdf/raw/main/sello.png'
+                ];
+                
+                // Cargar firma del asesor con múltiples intentos
+                for (let url of advisorUrls) {
+                    try {
+                        const response = await fetch(url, { mode: 'cors' });
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            advisorSignature = await blobToDataURL(blob);
+                            console.log('Firma del asesor cargada desde:', url);
+                            break;
+                        }
+                    } catch (e) {
+                        console.warn('Error con URL:', url, e);
+                    }
+                }
+                
+                // Cargar sello con múltiples intentos
+                for (let url of stampUrls) {
+                    try {
+                        const response = await fetch(url, { mode: 'cors' });
+                        if (response.ok) {
+                            const blob = await response.blob();
+                            stampImage = await blobToDataURL(blob);
+                            console.log('Sello cargado desde:', url);
+                            break;
+                        }
+                    } catch (e) {
+                        console.warn('Error con URL:', url, e);
+                    }
+                }
+                
+                // Si no se pudo cargar, usar imágenes base64 reales
+                if (!advisorSignature) {
+                    // Crear una imagen simple para la firma del asesor
+                    advisorSignature = await createTextImage('KATHERIN FIORELLA\nABISRROR MORALES', 200, 80);
+                    console.log('Usando firma generada para el asesor');
+                }
+                
+                if (!stampImage) {
+                    // Crear una imagen simple para el sello
+                    stampImage = await createStampImage();
+                    console.log('Usando sello generado');
+                }
                 
             } catch (error) {
-                console.warn('No se pudieron cargar desde GitHub, usando elementos por defecto:', error);
-                // Usar imágenes por defecto si GitHub falla
-                advisorSignature = FALLBACK_ADVISOR_SIGNATURE;
-                stampImage = FALLBACK_STAMP;
-            }
-            
-            // Verificar que tengamos algo cargado
-            if (!advisorSignature || !stampImage) {
-                advisorSignature = FALLBACK_ADVISOR_SIGNATURE;
-                stampImage = FALLBACK_STAMP;
+                console.error('Error general al cargar imágenes:', error);
+                // Crear imágenes de respaldo
+                advisorSignature = await createTextImage('KATHERIN FIORELLA\nABISRROR MORALES', 200, 80);
+                stampImage = await createStampImage();
             }
             
             showStatus('¡Sistema listo! Sube tu documento PDF para comenzar.', 'success');
             checkReadyToProcess();
         }
 
-        // Función auxiliar para cargar desde GitHub
-        async function loadImagesFromGitHub() {
-            const advisorPromise = fetch(GITHUB_ADVISOR_SIGNATURE_URL)
-                .then(response => {
-                    if (!response.ok) throw new Error('Error al cargar firma');
-                    return response.blob();
-                })
-                .then(blob => {
-                    return new Promise(resolve => {
-                        const reader = new FileReader();
-                        reader.onload = e => {
-                            advisorSignature = e.target.result;
-                            resolve();
-                        };
-                        reader.readAsDataURL(blob);
-                    });
-                });
+        // Función auxiliar para convertir blob a dataURL
+        function blobToDataURL(blob) {
+            return new Promise(resolve => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.readAsDataURL(blob);
+            });
+        }
 
-            const stampPromise = fetch(GITHUB_STAMP_URL)
-                .then(response => {
-                    if (!response.ok) throw new Error('Error al cargar sello');
-                    return response.blob();
-                })
-                .then(blob => {
-                    return new Promise(resolve => {
-                        const reader = new FileReader();
-                        reader.onload = e => {
-                            stampImage = e.target.result;
-                            resolve();
-                        };
-                        reader.readAsDataURL(blob);
-                    });
+        // Función para crear imagen de texto (firma del asesor)
+        function createTextImage(text, width, height) {
+            return new Promise(resolve => {
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                
+                // Fondo transparente
+                ctx.clearRect(0, 0, width, height);
+                
+                // Estilo de texto
+                ctx.font = '16px Arial';
+                ctx.fillStyle = '#000000';
+                ctx.textAlign = 'center';
+                
+                // Dividir texto por líneas
+                const lines = text.split('\n');
+                const lineHeight = 20;
+                const startY = (height - (lines.length * lineHeight)) / 2 + lineHeight;
+                
+                lines.forEach((line, index) => {
+                    ctx.fillText(line, width / 2, startY + (index * lineHeight));
                 });
+                
+                resolve(canvas.toDataURL('image/png'));
+            });
+        }
 
-            await Promise.all([advisorPromise, stampPromise]);
+        // Función para crear imagen de sello
+        function createStampImage() {
+            return new Promise(resolve => {
+                const canvas = document.createElement('canvas');
+                canvas.width = 120;
+                canvas.height = 120;
+                const ctx = canvas.getContext('2d');
+                
+                // Dibujar círculo
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(60, 60, 50, 0, 2 * Math.PI);
+                ctx.stroke();
+                
+                // Texto del sello
+                ctx.font = '10px Arial';
+                ctx.fillStyle = '#000000';
+                ctx.textAlign = 'center';
+                ctx.fillText('RECIBIDO', 60, 40);
+                
+                // Fecha actual
+                const today = new Date();
+                const dateStr = today.getDate().toString().padStart(2, '0') + '/' + 
+                               (today.getMonth() + 1).toString().padStart(2, '0') + '/' + 
+                               today.getFullYear().toString().slice(-2);
+                ctx.fillText(dateStr, 60, 80);
+                
+                resolve(canvas.toDataURL('image/png'));
+            });
         }
 
         // Event listeners
@@ -720,7 +795,7 @@
                 
                 showStatus('Procesando documento PDF...', 'info');
 
-                // Validar que tenemos todos los elementos necesarios
+                // Validar que tenemos los elementos básicos
                 if (!pdfFile) {
                     throw new Error('No se ha cargado el archivo PDF');
                 }
@@ -728,23 +803,18 @@
                     throw new Error('No se ha cargado la firma del cliente');
                 }
 
-                // Verificar que las imágenes fijas estén cargadas
+                // Asegurar que tenemos los elementos del asesor
                 if (!advisorSignature || !stampImage) {
-                    showStatus('Cargando elementos del asesor...', 'info');
-                    await loadFixedImages();
-                    // Pequeña pausa para asegurar que se carguen
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-
-                if (!advisorSignature || !stampImage) {
-                    throw new Error('No se pudieron cargar los elementos del asesor. Verifica tu conexión a internet.');
+                    showStatus('Preparando elementos del sistema...', 'info');
+                    advisorSignature = advisorSignature || FALLBACK_ADVISOR_SIGNATURE;
+                    stampImage = stampImage || FALLBACK_STAMP;
                 }
 
                 showStatus('Cargando documento PDF...', 'info');
                 // Cargar el PDF existente
                 const existingPdfDoc = await PDFLib.PDFDocument.load(pdfFile);
                 
-                showStatus('Copiando páginas...', 'info');
+                showStatus('Preparando documento final...', 'info');
                 // Crear nuevo documento
                 const pdfDoc = await PDFLib.PDFDocument.create();
                 
@@ -760,23 +830,22 @@
                 const pages = pdfDoc.getPages();
                 const firstPage = pages[0];
 
-                showStatus('Procesando imágenes...', 'info');
-                // Embed de las imágenes con manejo de errores mejorado
-                const advisorImg = await embedImageToPdf(pdfDoc, advisorSignature);
+                showStatus('Agregando firmas y elementos...', 'info');
+                
+                // Embed de las imágenes
                 const clientImg = await embedImageToPdf(pdfDoc, clientSignature);
+                const advisorImg = await embedImageToPdf(pdfDoc, advisorSignature);
                 const stampImg = await embedImageToPdf(pdfDoc, stampImage);
 
-                showStatus('Agregando firmas y sello...', 'info');
                 // Obtener dimensiones de la página
                 const { width: pageWidth, height: pageHeight } = firstPage.getSize();
 
                 // Embed de fuentes para el texto
                 const helveticaFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
 
-                // Posiciones precisas basadas en el documento real
-                // Las coordenadas en PDF-lib van de abajo hacia arriba
+                // Agregar elementos al PDF
                 
-                // Firma del cliente (lado izquierdo, sobre la línea correspondiente)
+                // Firma del cliente (lado izquierdo)
                 const clientSigWidth = 220;
                 const clientSigHeight = 120;
                 firstPage.drawImage(clientImg, {
@@ -786,7 +855,7 @@
                     height: clientSigHeight,
                 });
 
-                // Firma del asesor (lado derecho, sobre la línea correspondiente)  
+                // Firma del asesor (lado derecho)
                 const advisorSigWidth = 220;
                 const advisorSigHeight = 120;
                 firstPage.drawImage(advisorImg, {
@@ -796,8 +865,7 @@
                     height: advisorSigHeight,
                 });
 
-                // Agregar datos del asesor (texto)
-                // Nombre del asesor
+                // Texto del asesor
                 firstPage.drawText('KATHERIN FIORELLA ABISRROR MORALES', {
                     x: 340,
                     y: 140,
@@ -806,7 +874,6 @@
                     color: PDFLib.rgb(0, 0, 0),
                 });
 
-                // Código del asesor
                 firstPage.drawText('SYSTEM    60956705', {
                     x: 340,
                     y: 125,
@@ -815,7 +882,7 @@
                     color: PDFLib.rgb(0, 0, 0),
                 });
 
-                // Sello (esquina inferior derecha, más grande)
+                // Sello
                 const stampSize = 140;
                 firstPage.drawImage(stampImg, {
                     x: pageWidth - 160,
@@ -824,30 +891,28 @@
                     height: stampSize,
                 });
 
-                showStatus('Generando PDF final...', 'info');
+                showStatus('Generando archivo final...', 'info');
                 // Generar el PDF final
                 const pdfBytes = await pdfDoc.save();
                 processedPdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
 
-                // Mostrar resultado con vista previa
+                // Mostrar resultado
                 showResult();
                 
-                // Actualizar paso 3
+                // Actualizar paso final
                 document.getElementById('step4').classList.add('active');
                 
-                showStatus('¡Documento procesado exitosamente! Revisa la vista previa y descarga si está correcto.', 'success');
+                showStatus('¡Documento procesado exitosamente! Revisa la vista previa y descarga.', 'success');
 
             } catch (error) {
-                console.error('Error detallado al procesar PDF:', error);
-                let errorMessage = 'Error desconocido';
+                console.error('Error al procesar PDF:', error);
                 
+                let errorMessage = 'Error al procesar el documento';
                 if (error.message) {
                     errorMessage = error.message;
-                } else if (error.toString) {
-                    errorMessage = error.toString();
                 }
                 
-                showStatus('Error al procesar el documento: ' + errorMessage, 'error');
+                showStatus('Error: ' + errorMessage + '. Intenta de nuevo.', 'error');
             } finally {
                 const button = document.getElementById('processButton');
                 button.disabled = false;
