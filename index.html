@@ -159,13 +159,6 @@
             background: linear-gradient(135deg, #f8fff8 0%, #e8f5e8 100%);
         }
 
-        .file-input-group {
-            display: grid;
-            grid-template-columns: 1fr 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
-        }
-
         .file-input {
             position: relative;
             overflow: hidden;
@@ -241,7 +234,6 @@
             border-radius: 5px;
         }
 
-        /* NUEVOS ESTILOS PARA POSICIONAMIENTO */
         .position-preview-section {
             background: linear-gradient(135deg, #f8f9ff 0%, #e8f0ff 100%);
             border: 2px solid #007bff;
@@ -521,10 +513,6 @@
                 grid-template-columns: 1fr;
             }
             
-            .file-input-group {
-                grid-template-columns: 1fr;
-            }
-            
             .coordinates-grid {
                 grid-template-columns: 1fr;
             }
@@ -668,8 +656,8 @@
                     </p>
                     
                     <div class="preset-buttons">
-                        <button class="preset-button" onclick="applyPreset('standard')">📝 Estándar</button>
-                        <button class="preset-button" onclick="applyPreset('centered')">📍 Centrado</button>
+                        <button class="preset-button" onclick="applyPreset('standard')">📄 Estándar</button>
+                        <button class="preset-button" onclick="applyPreset('centered')">🎯 Centrado</button>
                         <button class="preset-button" onclick="applyPreset('bottom')">⬇️ Inferior</button>
                         <button class="preset-button" onclick="resetPositions()">🔄 Reiniciar</button>
                     </div>
@@ -771,10 +759,11 @@
         let clientSignature = null;
         let stampImage = null;
         let pdfFile = null;
+        let pdfArrayBuffer = null; // Separar el ArrayBuffer para evitar conflictos
         let processedPdfBlob = null;
 
         // Variables para arrastrar
-        let pdfDoc = null;
+        let pdfDocViewer = null; // Para el viewer de PDF.js
         let pdfCanvas = null;
         let scale = 1;
         let pageWidth = 0;
@@ -784,22 +773,31 @@
         let dragOffset = { x: 0, y: 0 };
 
         // Configurar PDF.js
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        if (typeof pdfjsLib !== 'undefined') {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        }
 
         // Event listeners
-        document.getElementById('pdfFile').addEventListener('change', handlePdfFile);
-        document.getElementById('advisorSignature').addEventListener('change', handleAdvisorSignature);
-        document.getElementById('clientSignature').addEventListener('change', handleClientSignature);
-        document.getElementById('stampImage').addEventListener('change', handleStampImage);
-        document.getElementById('processButton').addEventListener('click', processPdf);
-        document.getElementById('downloadButton').addEventListener('click', downloadPdf);
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('pdfFile').addEventListener('change', handlePdfFile);
+            document.getElementById('advisorSignature').addEventListener('change', handleAdvisorSignature);
+            document.getElementById('clientSignature').addEventListener('change', handleClientSignature);
+            document.getElementById('stampImage').addEventListener('change', handleStampImage);
+            document.getElementById('processButton').addEventListener('click', processPdf);
+            document.getElementById('downloadButton').addEventListener('click', downloadPdf);
+            
+            setupDragAndDrop();
+            showStatus('¡Sistema listo! Sube tu PDF para comenzar.', 'success');
+        });
 
         function setupDragAndDrop() {
             const elements = ['advisorElement', 'clientElement', 'stampElement'];
             
             elements.forEach(elementId => {
                 const element = document.getElementById(elementId);
-                element.addEventListener('mousedown', startDrag);
+                if (element) {
+                    element.addEventListener('mousedown', startDrag);
+                }
             });
             
             document.addEventListener('mousemove', drag);
@@ -864,6 +862,7 @@
 
         function updateElementFromInput(elementType) {
             const element = document.getElementById(elementType + 'Element');
+            if (!element) return;
             
             const x = parseInt(document.getElementById(elementType + 'X').value) || 0;
             const y = parseInt(document.getElementById(elementType + 'Y').value) || 0;
@@ -871,15 +870,17 @@
             const h = parseInt(document.getElementById(elementType + 'H').value) || 50;
             
             // Convertir coordenadas PDF a posición canvas
-            const canvasX = x * scale;
-            const canvasY = (pdfCanvas.height / scale - y - h) * scale;
-            const canvasW = w * scale;
-            const canvasH = h * scale;
-            
-            element.style.left = canvasX + 'px';
-            element.style.top = canvasY + 'px';
-            element.style.width = canvasW + 'px';
-            element.style.height = canvasH + 'px';
+            if (pdfCanvas && scale) {
+                const canvasX = x * scale;
+                const canvasY = (pdfCanvas.height / scale - y - h) * scale;
+                const canvasW = w * scale;
+                const canvasH = h * scale;
+                
+                element.style.left = canvasX + 'px';
+                element.style.top = canvasY + 'px';
+                element.style.width = canvasW + 'px';
+                element.style.height = canvasH + 'px';
+            }
         }
 
         // Funciones de preset
@@ -907,10 +908,16 @@
 
             ['advisor', 'client', 'stamp'].forEach(type => {
                 const coords = preset[type];
-                document.getElementById(type + 'X').value = coords.x;
-                document.getElementById(type + 'Y').value = coords.y;
-                document.getElementById(type + 'W').value = coords.w;
-                document.getElementById(type + 'H').value = coords.h;
+                const xInput = document.getElementById(type + 'X');
+                const yInput = document.getElementById(type + 'Y');
+                const wInput = document.getElementById(type + 'W');
+                const hInput = document.getElementById(type + 'H');
+                
+                if (xInput) xInput.value = coords.x;
+                if (yInput) yInput.value = coords.y;
+                if (wInput) wInput.value = coords.w;
+                if (hInput) hInput.value = coords.h;
+                
                 updateElementFromInput(type);
             });
         }
@@ -922,8 +929,13 @@
         // Renderizar PDF en canvas
         async function renderPdfPreview(arrayBuffer) {
             try {
-                pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                const page = await pdfDoc.getPage(1);
+                if (typeof pdfjsLib === 'undefined') {
+                    console.warn('PDF.js no está disponible, saltando renderizado visual');
+                    return true;
+                }
+
+                pdfDocViewer = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                const page = await pdfDocViewer.getPage(1);
                 
                 const viewport = page.getViewport({ scale: 1 });
                 pageWidth = viewport.width;
@@ -953,22 +965,28 @@
                 return true;
             } catch (error) {
                 console.error('Error renderizando PDF:', error);
-                return false;
+                // Continuar sin renderizado visual
+                document.getElementById('positionSection').classList.add('show');
+                document.getElementById('step3').classList.add('active');
+                return true;
             }
         }
 
         function showDraggableElements() {
             // Mostrar elementos que tengan imagen cargada
             if (advisorSignature) {
-                document.getElementById('advisorElement').style.display = 'block';
+                const element = document.getElementById('advisorElement');
+                element.style.display = 'block';
                 updateElementFromInput('advisor');
             }
             if (clientSignature) {
-                document.getElementById('clientElement').style.display = 'block';
+                const element = document.getElementById('clientElement');
+                element.style.display = 'block';
                 updateElementFromInput('client');
             }
             if (stampImage) {
-                document.getElementById('stampElement').style.display = 'block';
+                const element = document.getElementById('stampElement');
+                element.style.display = 'block';
                 updateElementFromInput('stamp');
             }
         }
@@ -979,7 +997,9 @@
             if (file) {
                 const reader = new FileReader();
                 reader.onload = async function(e) {
-                    pdfFile = e.target.result;
+                    pdfArrayBuffer = e.target.result; // Guardar ArrayBuffer por separado
+                    pdfFile = new Uint8Array(pdfArrayBuffer); // Para PDF-lib
+                    
                     const preview = document.getElementById('pdfPreview');
                     preview.innerHTML = `<div style="font-size: 3em;">📄</div>
                                        <p style="margin-top: 10px; font-weight: bold;">${file.name}</p>
@@ -987,9 +1007,9 @@
                     preview.classList.add('has-content');
                     
                     // Renderizar PDF en canvas
-                    const rendered = await renderPdfPreview(e.target.result);
+                    const rendered = await renderPdfPreview(pdfArrayBuffer);
                     if (rendered) {
-                        showStatus('PDF cargado y renderizado. Ahora sube las firmas.', 'success');
+                        showStatus('PDF cargado correctamente. Ahora sube las firmas.', 'success');
                     }
                     
                     // Mostrar sección de firma del asesor primero
@@ -1013,7 +1033,8 @@
                     preview.classList.add('has-content');
                     
                     // Configurar imagen en elemento arrastrable
-                    document.getElementById('advisorImg').src = advisorSignature;
+                    const img = document.getElementById('advisorImg');
+                    if (img) img.src = advisorSignature;
                     
                     // Mostrar siguiente sección
                     document.getElementById('clientSection').style.display = 'block';
@@ -1039,7 +1060,8 @@
                     preview.classList.add('has-content');
                     
                     // Configurar imagen en elemento arrastrable
-                    document.getElementById('clientImg').src = clientSignature;
+                    const img = document.getElementById('clientImg');
+                    if (img) img.src = clientSignature;
                     
                     // Mostrar siguiente sección
                     document.getElementById('stampSection').style.display = 'block';
@@ -1065,7 +1087,8 @@
                     preview.classList.add('has-content');
                     
                     // Configurar imagen en elemento arrastrable
-                    document.getElementById('stampImg').src = stampImage;
+                    const img = document.getElementById('stampImg');
+                    if (img) img.src = stampImage;
                     
                     showDraggableElements();
                     updateSteps();
@@ -1188,20 +1211,20 @@
                 const helveticaFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
 
                 // Obtener coordenadas de los inputs
-                const advisorX = parseInt(document.getElementById('advisorX').value);
-                const advisorY = parseInt(document.getElementById('advisorY').value);
-                const advisorW = parseInt(document.getElementById('advisorW').value);
-                const advisorH = parseInt(document.getElementById('advisorH').value);
+                const advisorX = parseInt(document.getElementById('advisorX').value) || 340;
+                const advisorY = parseInt(document.getElementById('advisorY').value) || 175;
+                const advisorW = parseInt(document.getElementById('advisorW').value) || 220;
+                const advisorH = parseInt(document.getElementById('advisorH').value) || 120;
 
-                const clientX = parseInt(document.getElementById('clientX').value);
-                const clientY = parseInt(document.getElementById('clientY').value);
-                const clientW = parseInt(document.getElementById('clientW').value);
-                const clientH = parseInt(document.getElementById('clientH').value);
+                const clientX = parseInt(document.getElementById('clientX').value) || 70;
+                const clientY = parseInt(document.getElementById('clientY').value) || 175;
+                const clientW = parseInt(document.getElementById('clientW').value) || 220;
+                const clientH = parseInt(document.getElementById('clientH').value) || 120;
 
-                const stampX = parseInt(document.getElementById('stampX').value);
-                const stampY = parseInt(document.getElementById('stampY').value);
-                const stampW = parseInt(document.getElementById('stampW').value);
-                const stampH = parseInt(document.getElementById('stampH').value);
+                const stampX = parseInt(document.getElementById('stampX').value) || 450;
+                const stampY = parseInt(document.getElementById('stampY').value) || 40;
+                const stampW = parseInt(document.getElementById('stampW').value) || 140;
+                const stampH = parseInt(document.getElementById('stampH').value) || 140;
 
                 // Agregar elementos solo si están cargados
                 if (advisorSignature) {
@@ -1313,13 +1336,6 @@
                 }
             }, 5000);
         }
-
-        // Inicialización
-        document.addEventListener('DOMContentLoaded', function() {
-            showStatus('Inicializando aplicación...', 'info');
-            setupDragAndDrop();
-            showStatus('¡Sistema listo! Sube tu PDF para comenzar.', 'success');
-        });
     </script>
 </body>
 </html>
