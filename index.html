@@ -806,35 +806,36 @@
                 const { width: pageWidth, height: pageHeight } = firstPage.getSize();
                 const helveticaFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
 
-                // Firma del cliente
+                // Ajustar posiciones para que las firmas queden exactamente en las líneas
+                // Firma del cliente (lado izquierdo)
                 firstPage.drawImage(clientImg, {
-                    x: 70,
-                    y: 175,
-                    width: 220,
-                    height: 120,
+                    x: 80,  // Posición horizontal ajustada
+                    y: 160, // Posición vertical ajustada para quedar en la línea
+                    width: 180,  // Ancho reducido para mejor ajuste
+                    height: 60,  // Alto reducido para que no sobrepase la línea
                 });
 
-                // Firma del asesor
+                // Firma del asesor (lado derecho)
                 firstPage.drawImage(advisorImg, {
-                    x: 340,
-                    y: 175,
-                    width: 220,
-                    height: 120,
+                    x: 350, // Posición horizontal ajustada
+                    y: 160, // Misma altura que la firma del cliente
+                    width: 180, // Mismo ancho
+                    height: 60, // Mismo alto
                 });
 
-                // Texto del asesor
+                // Texto del asesor (debajo de la firma)
                 firstPage.drawText('KATHERIN FIORELLA ABISRROR MORALES', {
-                    x: 340,
-                    y: 140,
-                    size: 9,
+                    x: 350,
+                    y: 145,  // Justo debajo de la firma
+                    size: 8,
                     font: helveticaFont,
                     color: PDFLib.rgb(0, 0, 0),
                 });
 
                 firstPage.drawText('SYSTEM    60956705', {
-                    x: 340,
-                    y: 125,
-                    size: 9,
+                    x: 350,
+                    y: 132,  // Línea siguiente
+                    size: 8,
                     font: helveticaFont,
                     color: PDFLib.rgb(0, 0, 0),
                 });
