@@ -20,7 +20,7 @@
         }
 
         .container {
-            max-width: 1000px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
             border-radius: 20px;
@@ -80,7 +80,7 @@
 
         .workflow-steps {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 25px;
             margin-bottom: 40px;
         }
@@ -201,6 +201,10 @@
 
         .file-input-button.client {
             background: linear-gradient(135deg, #fd7e14 0%, #e55a2b 100%);
+        }
+
+        .file-input-button.stamp {
+            background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
         }
 
         .preview-area {
@@ -350,38 +354,43 @@
             border: 2px solid #b3d7ff;
         }
 
-        .fixed-elements-info {
+        .auto-load-section {
             background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
             border: 2px solid #ffeaa7;
             border-radius: 10px;
             padding: 20px;
             margin: 20px 0;
+            text-align: center;
         }
 
-        .fixed-elements-info h3 {
+        .auto-load-section h3 {
             color: #856404;
             margin-bottom: 15px;
             font-size: 1.2em;
         }
 
-        .fixed-elements-info ul {
-            color: #856404;
-            list-style: none;
-            padding: 0;
+        .auto-load-button {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 12px 25px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
         }
 
-        .fixed-elements-info ul li {
-            padding: 5px 0;
-            padding-left: 20px;
-            position: relative;
+        .auto-load-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.4);
         }
 
-        .fixed-elements-info ul li::before {
-            content: "✓";
-            position: absolute;
-            left: 0;
-            color: #28a745;
-            font-weight: bold;
+        .signatures-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin: 30px 0;
         }
 
         @media (max-width: 768px) {
@@ -390,6 +399,10 @@
             }
             
             .file-input-group {
+                grid-template-columns: 1fr;
+            }
+            
+            .signatures-container {
                 grid-template-columns: 1fr;
             }
             
@@ -412,38 +425,46 @@
 
         <div class="main-content">
             <div class="workflow-steps">
-                <div class="step" id="step2">
+                <div class="step" id="step1">
                     <div class="step-number">1</div>
                     <h3>Subir Documento PDF</h3>
                     <p>Carga el documento base a procesar</p>
                 </div>
-                <div class="step" id="step3">
+                <div class="step" id="step2">
                     <div class="step-number">2</div>
+                    <h3>Firma del Asesor</h3>
+                    <p>Carga o usa la firma predeterminada</p>
+                </div>
+                <div class="step" id="step3">
+                    <div class="step-number">3</div>
                     <h3>Firma del Cliente</h3>
-                    <p>Agrega únicamente la firma del cliente</p>
+                    <p>Agrega la firma del cliente</p>
                 </div>
                 <div class="step" id="step4">
-                    <div class="step-number">3</div>
+                    <div class="step-number">4</div>
+                    <h3>Sello</h3>
+                    <p>Carga o genera el sello automático</p>
+                </div>
+                <div class="step" id="step5">
+                    <div class="step-number">5</div>
                     <h3>Procesar y Descargar</h3>
-                    <p>Obtén tu documento completado automáticamente</p>
+                    <p>Obtén tu documento final</p>
                 </div>
             </div>
 
-            <div class="fixed-elements-info">
-                <h3>🔧 Elementos que se agregan automáticamente:</h3>
-                <ul>
-                    <li>Firma del asesor (KATHERIN FIORELLA ABISRROR MORALES)</li>
-                    <li>Sello con fecha actual</li>
-                    <li>Datos del asesor (SYSTEM - 60956705)</li>
-                </ul>
+            <!-- Sección de carga automática -->
+            <div class="auto-load-section">
+                <h3>🚀 Carga Rápida</h3>
+                <p>Usa los elementos predeterminados del repositorio:</p>
+                <button class="auto-load-button" id="loadDefaultsButton">
+                    Cargar Firma y Sello Predeterminados
+                </button>
+                <p style="font-size: 0.9em; color: #856404; margin-top: 10px;">
+                    Esto cargará la firma de KATHERIN FIORELLA ABISRROR MORALES y el sello desde GitHub
+                </p>
             </div>
 
-            <!-- Sección oculta para cargar elementos automáticamente -->
-            <div id="configSection" style="display: none;">
-                <div id="advisorPreview"></div>
-                <div id="stampPreview"></div>
-            </div>
-
+            <!-- Sección PDF -->
             <div class="upload-section" id="pdfSection">
                 <h2>📄 Subir Documento PDF</h2>
                 <div class="file-input">
@@ -459,18 +480,59 @@
                 </div>
             </div>
 
-            <div class="upload-section" id="clientSection" style="display: none;">
-                <h2>✏️ Firma del Cliente</h2>
+            <!-- Sección de Firmas -->
+            <div class="signatures-container">
+                <!-- Firma del Asesor -->
+                <div class="upload-section" id="advisorSection">
+                    <h2>👨‍💼 Firma del Asesor</h2>
+                    <div class="file-input">
+                        <input type="file" id="advisorSignature" accept="image/*">
+                        <label for="advisorSignature" class="file-input-button advisor">
+                            🖋 Subir Firma del Asesor
+                        </label>
+                    </div>
+                    <div class="preview-area">
+                        <div class="preview-box" id="advisorPreview">
+                            <p>Firma del asesor aparecerá aquí</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Firma del Cliente -->
+                <div class="upload-section" id="clientSection">
+                    <h2>👤 Firma del Cliente</h2>
+                    <div class="file-input">
+                        <input type="file" id="clientSignature" accept="image/*">
+                        <label for="clientSignature" class="file-input-button client">
+                            🖋 Subir Firma del Cliente
+                        </label>
+                    </div>
+                    <div class="preview-area">
+                        <div class="preview-box" id="clientPreview">
+                            <p>Firma del cliente aparecerá aquí</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sección del Sello -->
+            <div class="upload-section" id="stampSection">
+                <h2>🔖 Sello</h2>
                 <div class="file-input">
-                    <input type="file" id="clientSignature" accept="image/*">
-                    <label for="clientSignature" class="file-input-button client">
-                        🔏 Subir Firma del Cliente
+                    <input type="file" id="stampFile" accept="image/*">
+                    <label for="stampFile" class="file-input-button stamp">
+                        📋 Subir Sello
                     </label>
                 </div>
                 <div class="preview-area">
-                    <div class="preview-box" id="clientPreview">
-                        <p>Firma del cliente aparecerá aquí</p>
+                    <div class="preview-box" id="stampPreview">
+                        <p>Sello aparecerá aquí</p>
                     </div>
+                </div>
+                <div style="text-align: center; margin-top: 15px;">
+                    <button class="auto-load-button" id="generateStampButton">
+                        ⚡ Generar Sello con Fecha Actual
+                    </button>
                 </div>
             </div>
 
@@ -503,88 +565,197 @@
         let clientSignature = null;
         let processedPdfBlob = null;
 
-        // URLs de las imágenes fijas en GitHub (URLs directas)
-        const GITHUB_ADVISOR_SIGNATURE_URL = 'https://raw.githubusercontent.com/brayan-rr/procesador-pdf/main/firma_ase.jpeg';
-        const GITHUB_STAMP_URL = 'https://raw.githubusercontent.com/brayan-rr/procesador-pdf/main/sello.png';
+        // URLs para cargar desde GitHub
+        const REPO_BASE_URL = 'https://raw.githubusercontent.com/brayan-rr/procesador-pdf/main/';
+        const ADVISOR_SIGNATURE_URLS = [
+            REPO_BASE_URL + 'firma_ase.jpeg',
+            'https://github.com/brayan-rr/procesador-pdf/raw/main/firma_ase.jpeg'
+        ];
 
-        // Imágenes base64 como respaldo (puedes reemplazar estas con las tuyas)
-        const FALLBACK_ADVISOR_SIGNATURE = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
-        const FALLBACK_STAMP = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==';
+        const STAMP_URLS = [
+            REPO_BASE_URL + 'sello.png',
+            'https://github.com/brayan-rr/procesador-pdf/raw/main/sello.png'
+        ];
 
-        // Datos fijos del asesor
+        // Datos del asesor
         const advisorData = {
             name: "KATHERIN FIORELLA ABISRROR MORALES",
             id: "60956705"
         };
 
-        // Función robusta para cargar imágenes fijas con URLs corregidas
-        async function loadFixedImages() {
+        // Event listeners
+        document.getElementById('pdfFile').addEventListener('change', handlePdfFile);
+        document.getElementById('advisorSignature').addEventListener('change', handleAdvisorSignature);
+        document.getElementById('clientSignature').addEventListener('change', handleClientSignature);
+        document.getElementById('stampFile').addEventListener('change', handleStampFile);
+        document.getElementById('processButton').addEventListener('click', processPdf);
+        document.getElementById('downloadButton').addEventListener('click', downloadPdf);
+        document.getElementById('loadDefaultsButton').addEventListener('click', loadDefaultElements);
+        document.getElementById('generateStampButton').addEventListener('click', generateStamp);
+
+        // Función para cargar imagen desde URL
+        async function loadImageFromUrl(url) {
             try {
-                showStatus('Cargando elementos del sistema...', 'info');
-                
-                // Intentar múltiples URLs para las imágenes
-                const advisorUrls = [
-                    'https://raw.githubusercontent.com/brayan-rr/procesador-pdf/main/firma_ase.jpeg',
-                    'https://github.com/brayan-rr/procesador-pdf/raw/main/firma_ase.jpeg'
-                ];
-                
-                const stampUrls = [
-                    'https://raw.githubusercontent.com/brayan-rr/procesador-pdf/main/sello.png',
-                    'https://github.com/brayan-rr/procesador-pdf/raw/main/sello.png'
-                ];
-                
-                // Cargar firma del asesor con múltiples intentos
-                for (let url of advisorUrls) {
-                    try {
-                        const response = await fetch(url, { mode: 'cors' });
-                        if (response.ok) {
-                            const blob = await response.blob();
-                            advisorSignature = await blobToDataURL(blob);
-                            console.log('Firma del asesor cargada desde:', url);
-                            break;
-                        }
-                    } catch (e) {
-                        console.warn('Error con URL:', url, e);
-                    }
+                const response = await fetch(url, { mode: 'cors' });
+                if (response.ok) {
+                    const blob = await response.blob();
+                    return await blobToDataURL(blob);
                 }
-                
-                // Cargar sello con múltiples intentos
-                for (let url of stampUrls) {
-                    try {
-                        const response = await fetch(url, { mode: 'cors' });
-                        if (response.ok) {
-                            const blob = await response.blob();
-                            stampImage = await blobToDataURL(blob);
-                            console.log('Sello cargado desde:', url);
-                            break;
-                        }
-                    } catch (e) {
-                        console.warn('Error con URL:', url, e);
-                    }
-                }
-                
-                // Si no se pudo cargar, usar imágenes base64 reales
-                if (!advisorSignature) {
-                    // Crear una imagen simple para la firma del asesor
-                    advisorSignature = await createTextImage('KATHERIN FIORELLA\nABISRROR MORALES', 200, 80);
-                    console.log('Usando firma generada para el asesor');
-                }
-                
-                if (!stampImage) {
-                    // Crear una imagen simple para el sello
-                    stampImage = await createStampImage();
-                    console.log('Usando sello generado');
-                }
-                
             } catch (error) {
-                console.error('Error general al cargar imágenes:', error);
-                // Crear imágenes de respaldo
-                advisorSignature = await createTextImage('KATHERIN FIORELLA\nABISRROR MORALES', 200, 80);
-                stampImage = await createStampImage();
+                console.error('Error cargando imagen desde URL:', error);
             }
+            return null;
+        }
+
+        // Función para cargar elementos predeterminados
+        async function loadDefaultElements() {
+            showStatus('Cargando elementos desde GitHub...', 'info');
             
-            showStatus('¡Sistema listo! Sube tu documento PDF para comenzar.', 'success');
+            // Cargar firma del asesor
+            for (const url of ADVISOR_SIGNATURE_URLS) {
+                const signature = await loadImageFromUrl(url);
+                if (signature) {
+                    advisorSignature = signature;
+                    const preview = document.getElementById('advisorPreview');
+                    preview.innerHTML = `<img src="${signature}" class="preview-image" alt="Firma del Asesor">
+                                       <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Firma cargada desde GitHub</p>`;
+                    preview.classList.add('has-content');
+                    break;
+                }
+            }
+
+            // Cargar sello
+            for (const url of STAMP_URLS) {
+                const stamp = await loadImageFromUrl(url);
+                if (stamp) {
+                    stampImage = stamp;
+                    const preview = document.getElementById('stampPreview');
+                    preview.innerHTML = `<img src="${stamp}" class="preview-image" alt="Sello">
+                                       <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Sello cargado desde GitHub</p>`;
+                    preview.classList.add('has-content');
+                    break;
+                }
+            }
+
+            // Si no se pudieron cargar desde GitHub, generar elementos de respaldo
+            if (!advisorSignature) {
+                advisorSignature = await createTextImage('KATHERIN FIORELLA\nABISRROR MORALES', 200, 80);
+                const preview = document.getElementById('advisorPreview');
+                preview.innerHTML = `<img src="${advisorSignature}" class="preview-image" alt="Firma del Asesor">
+                                   <p style="margin-top: 10px; font-size: 12px; color: #ffc107;">⚠ Firma generada (no se pudo cargar desde GitHub)</p>`;
+                preview.classList.add('has-content');
+            }
+
+            if (!stampImage) {
+                await generateStamp();
+            }
+
+            updateSteps();
             checkReadyToProcess();
+            showStatus('Elementos predeterminados cargados correctamente', 'success');
+        }
+
+        // Función para generar sello automático
+        async function generateStamp() {
+            stampImage = await createStampImage();
+            const preview = document.getElementById('stampPreview');
+            preview.innerHTML = `<img src="${stampImage}" class="preview-image" alt="Sello Generado">
+                               <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Sello generado con fecha actual</p>`;
+            preview.classList.add('has-content');
+            updateSteps();
+            checkReadyToProcess();
+        }
+
+        function handlePdfFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    pdfFile = e.target.result;
+                    const preview = document.getElementById('pdfPreview');
+                    preview.innerHTML = `<div style="font-size: 3em;">📄</div>
+                                       <p style="margin-top: 10px; font-weight: bold;">${file.name}</p>
+                                       <p style="font-size: 12px; color: #28a745;">✓ PDF cargado</p>`;
+                    preview.classList.add('has-content');
+                    updateSteps();
+                    checkReadyToProcess();
+                    showStatus('PDF cargado correctamente', 'success');
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        }
+
+        function handleAdvisorSignature(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    advisorSignature = e.target.result;
+                    const preview = document.getElementById('advisorPreview');
+                    preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Firma del Asesor">
+                                       <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Firma del asesor cargada</p>`;
+                    preview.classList.add('has-content');
+                    updateSteps();
+                    checkReadyToProcess();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleClientSignature(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    clientSignature = e.target.result;
+                    const preview = document.getElementById('clientPreview');
+                    preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Firma del Cliente">
+                                       <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Firma del cliente cargada</p>`;
+                    preview.classList.add('has-content');
+                    updateSteps();
+                    checkReadyToProcess();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleStampFile(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    stampImage = e.target.result;
+                    const preview = document.getElementById('stampPreview');
+                    preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Sello">
+                                       <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Sello cargado</p>`;
+                    preview.classList.add('has-content');
+                    updateSteps();
+                    checkReadyToProcess();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function updateSteps() {
+            const steps = document.querySelectorAll('.step');
+            steps.forEach(step => step.classList.remove('active'));
+
+            if (pdfFile) document.getElementById('step1').classList.add('active');
+            if (advisorSignature) document.getElementById('step2').classList.add('active');
+            if (clientSignature) document.getElementById('step3').classList.add('active');
+            if (stampImage) document.getElementById('step4').classList.add('active');
+        }
+
+        function checkReadyToProcess() {
+            const button = document.getElementById('processButton');
+            const isReady = pdfFile && advisorSignature && clientSignature && stampImage;
+            
+            button.disabled = !isReady;
+            
+            if (isReady) {
+                button.textContent = '🚀 Procesar Documento';
+                button.classList.remove('processing');
+            }
         }
 
         // Función auxiliar para convertir blob a dataURL
@@ -604,15 +775,11 @@
                 canvas.height = height;
                 const ctx = canvas.getContext('2d');
                 
-                // Fondo transparente
                 ctx.clearRect(0, 0, width, height);
-                
-                // Estilo de texto
                 ctx.font = '16px Arial';
                 ctx.fillStyle = '#000000';
                 ctx.textAlign = 'center';
                 
-                // Dividir texto por líneas
                 const lines = text.split('\n');
                 const lineHeight = 20;
                 const startY = (height - (lines.length * lineHeight)) / 2 + lineHeight;
@@ -643,327 +810,4 @@
                 // Texto del sello
                 ctx.font = '10px Arial';
                 ctx.fillStyle = '#000000';
-                ctx.textAlign = 'center';
-                ctx.fillText('RECIBIDO', 60, 40);
-                
-                // Fecha actual
-                const today = new Date();
-                const dateStr = today.getDate().toString().padStart(2, '0') + '/' + 
-                               (today.getMonth() + 1).toString().padStart(2, '0') + '/' + 
-                               today.getFullYear().toString().slice(-2);
-                ctx.fillText(dateStr, 60, 80);
-                
-                resolve(canvas.toDataURL('image/png'));
-            });
-        }
-
-        // Event listeners
-        document.getElementById('pdfFile').addEventListener('change', handlePdfFile);
-        document.getElementById('clientSignature').addEventListener('change', handleClientSignature);
-        document.getElementById('processButton').addEventListener('click', processPdf);
-        document.getElementById('downloadButton').addEventListener('click', downloadPdf);
-
-        function handlePdfFile(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    pdfFile = e.target.result;
-                    const preview = document.getElementById('pdfPreview');
-                    preview.innerHTML = `<div style="font-size: 3em;">📄</div>
-                                       <p style="margin-top: 10px; font-weight: bold;">${file.name}</p>
-                                       <p style="font-size: 12px; color: #28a745;">✓ PDF cargado</p>`;
-                    preview.classList.add('has-content');
-                    
-                    // Mostrar sección de firma del cliente
-                    document.getElementById('clientSection').style.display = 'block';
-                    updateSteps();
-                    checkReadyToProcess();
-                    showStatus('PDF cargado. Ahora sube la firma del cliente.', 'success');
-                };
-                reader.readAsArrayBuffer(file);
-            }
-        }
-
-        function handleClientSignature(event) {
-            const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    clientSignature = e.target.result;
-                    const preview = document.getElementById('clientPreview');
-                    preview.innerHTML = `<img src="${e.target.result}" class="preview-image" alt="Firma del Cliente">
-                                       <p style="margin-top: 10px; font-size: 12px; color: #28a745;">✓ Firma del cliente cargada</p>`;
-                    preview.classList.add('has-content');
-                    updateSteps();
-                    checkReadyToProcess();
-                    showStatus('¡Todo listo! Presiona "Procesar Documento" para continuar.', 'success');
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function updateSteps() {
-            const steps = document.querySelectorAll('.step');
-            steps.forEach(step => step.classList.remove('active'));
-
-            // Solo actualizar pasos visibles
-            if (pdfFile) {
-                document.getElementById('step2').classList.add('active');
-            }
-            if (clientSignature) {
-                document.getElementById('step3').classList.add('active');
-            }
-        }
-
-        function checkReadyToProcess() {
-            const button = document.getElementById('processButton');
-            // Solo necesitamos PDF y firma del cliente (las imágenes fijas se cargan automáticamente)
-            const isReady = pdfFile && clientSignature;
-            
-            button.disabled = !isReady;
-            
-            if (isReady) {
-                button.textContent = '🚀 Procesar Documento';
-                button.classList.remove('processing');
-            }
-        }
-
-        // Función auxiliar para determinar el tipo de imagen y convertir si es necesario
-        async function embedImageToPdf(pdfDoc, imageDataUrl) {
-            try {
-                // Extraer el tipo de imagen del data URL
-                const imageType = imageDataUrl.split(';')[0].split(':')[1];
-                
-                // Convertir a base64
-                const base64Data = imageDataUrl.split(',')[1];
-                const imageBytes = Uint8Array.from(atob(base64Data), c => c.charCodeAt(0));
-                
-                // Intentar embedPng primero
-                if (imageType === 'image/png') {
-                    return await pdfDoc.embedPng(imageBytes);
-                } else if (imageType === 'image/jpeg' || imageType === 'image/jpg') {
-                    return await pdfDoc.embedJpg(imageBytes);
-                } else {
-                    // Si no es PNG o JPG, intentar convertir usando canvas
-                    const convertedPng = await convertImageToPng(imageDataUrl);
-                    const convertedBytes = Uint8Array.from(atob(convertedPng.split(',')[1]), c => c.charCodeAt(0));
-                    return await pdfDoc.embedPng(convertedBytes);
-                }
-            } catch (error) {
-                console.error('Error al procesar imagen:', error);
-                // Intentar conversión a PNG como último recurso
-                try {
-                    const convertedPng = await convertImageToPng(imageDataUrl);
-                    const convertedBytes = Uint8Array.from(atob(convertedPng.split(',')[1]), c => c.charCodeAt(0));
-                    return await pdfDoc.embedPng(convertedBytes);
-                } catch (conversionError) {
-                    throw new Error('No se pudo procesar la imagen. Asegúrate de usar PNG o JPG.');
-                }
-            }
-        }
-
-        // Función para convertir cualquier imagen a PNG
-        function convertImageToPng(imageDataUrl) {
-            return new Promise((resolve, reject) => {
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const ctx = canvas.getContext('2d');
-                    
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    
-                    // Fondo blanco para transparencias
-                    ctx.fillStyle = 'white';
-                    ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    
-                    ctx.drawImage(img, 0, 0);
-                    resolve(canvas.toDataURL('image/png'));
-                };
-                img.onerror = reject;
-                img.src = imageDataUrl;
-            });
-        }
-
-        async function processPdf() {
-            try {
-                const button = document.getElementById('processButton');
-                button.disabled = true;
-                button.classList.add('processing');
-                button.innerHTML = '⚙️ Procesando Documento <span class="loading">⏳</span>';
-                
-                showStatus('Procesando documento PDF...', 'info');
-
-                // Validar que tenemos los elementos básicos
-                if (!pdfFile) {
-                    throw new Error('No se ha cargado el archivo PDF');
-                }
-                if (!clientSignature) {
-                    throw new Error('No se ha cargado la firma del cliente');
-                }
-
-                // Asegurar que tenemos los elementos del asesor
-                if (!advisorSignature || !stampImage) {
-                    showStatus('Preparando elementos del sistema...', 'info');
-                    advisorSignature = advisorSignature || FALLBACK_ADVISOR_SIGNATURE;
-                    stampImage = stampImage || FALLBACK_STAMP;
-                }
-
-                showStatus('Cargando documento PDF...', 'info');
-                // Cargar el PDF existente
-                const existingPdfDoc = await PDFLib.PDFDocument.load(pdfFile);
-                
-                showStatus('Preparando documento final...', 'info');
-                // Crear nuevo documento
-                const pdfDoc = await PDFLib.PDFDocument.create();
-                
-                // Copiar todas las páginas
-                const pageIndices = existingPdfDoc.getPageIndices();
-                const copiedPages = await pdfDoc.copyPages(existingPdfDoc, pageIndices);
-                
-                copiedPages.forEach((page) => {
-                    pdfDoc.addPage(page);
-                });
-
-                // Trabajar con la primera página (donde están las firmas)
-                const pages = pdfDoc.getPages();
-                const firstPage = pages[0];
-
-                showStatus('Agregando firmas y elementos...', 'info');
-                
-                // Embed de las imágenes
-                const clientImg = await embedImageToPdf(pdfDoc, clientSignature);
-                const advisorImg = await embedImageToPdf(pdfDoc, advisorSignature);
-                const stampImg = await embedImageToPdf(pdfDoc, stampImage);
-
-                // Obtener dimensiones de la página
-                const { width: pageWidth, height: pageHeight } = firstPage.getSize();
-
-                // Embed de fuentes para el texto
-                const helveticaFont = await pdfDoc.embedFont(PDFLib.StandardFonts.Helvetica);
-
-                // Agregar elementos al PDF
-                
-                // Firma del cliente (lado izquierdo)
-                const clientSigWidth = 220;
-                const clientSigHeight = 120;
-                firstPage.drawImage(clientImg, {
-                    x: 70,
-                    y: 175,
-                    width: clientSigWidth,
-                    height: clientSigHeight,
-                });
-
-                // Firma del asesor (lado derecho)
-                const advisorSigWidth = 220;
-                const advisorSigHeight = 120;
-                firstPage.drawImage(advisorImg, {
-                    x: 340,
-                    y: 175,
-                    width: advisorSigWidth,
-                    height: advisorSigHeight,
-                });
-
-                // Texto del asesor
-                firstPage.drawText('KATHERIN FIORELLA ABISRROR MORALES', {
-                    x: 340,
-                    y: 140,
-                    size: 9,
-                    font: helveticaFont,
-                    color: PDFLib.rgb(0, 0, 0),
-                });
-
-                firstPage.drawText('SYSTEM    60956705', {
-                    x: 340,
-                    y: 125,
-                    size: 9,
-                    font: helveticaFont,
-                    color: PDFLib.rgb(0, 0, 0),
-                });
-
-                // Sello
-                const stampSize = 140;
-                firstPage.drawImage(stampImg, {
-                    x: pageWidth - 160,
-                    y: 40,
-                    width: stampSize,
-                    height: stampSize,
-                });
-
-                showStatus('Generando archivo final...', 'info');
-                // Generar el PDF final
-                const pdfBytes = await pdfDoc.save();
-                processedPdfBlob = new Blob([pdfBytes], { type: 'application/pdf' });
-
-                // Mostrar resultado
-                showResult();
-                
-                // Actualizar paso final
-                document.getElementById('step4').classList.add('active');
-                
-                showStatus('¡Documento procesado exitosamente! Revisa la vista previa y descarga.', 'success');
-
-            } catch (error) {
-                console.error('Error al procesar PDF:', error);
-                
-                let errorMessage = 'Error al procesar el documento';
-                if (error.message) {
-                    errorMessage = error.message;
-                }
-                
-                showStatus('Error: ' + errorMessage + '. Intenta de nuevo.', 'error');
-            } finally {
-                const button = document.getElementById('processButton');
-                button.disabled = false;
-                button.classList.remove('processing');
-                button.textContent = '🚀 Procesar Documento';
-            }
-        }
-
-        function showResult() {
-            const resultSection = document.getElementById('resultSection');
-            const preview = document.getElementById('resultPreview');
-            
-            const url = URL.createObjectURL(processedPdfBlob);
-            preview.src = url;
-            
-            resultSection.classList.add('show');
-            resultSection.scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function downloadPdf() {
-            if (processedPdfBlob) {
-                const url = URL.createObjectURL(processedPdfBlob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `declaracion_procesada_${new Date().getTime()}.pdf`;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-                showStatus('¡Documento descargado exitosamente!', 'success');
-            }
-        }
-
-        function showStatus(message, type) {
-            const statusArea = document.getElementById('statusArea');
-            statusArea.innerHTML = `<div class="status-message ${type}">${message}</div>`;
-            
-            setTimeout(() => {
-                if (type !== 'error') {
-                    statusArea.innerHTML = '';
-                }
-            }, 5000);
-        }
-
-        // Inicialización
-        document.addEventListener('DOMContentLoaded', function() {
-            showStatus('Inicializando aplicación...', 'info');
-            
-            // Cargar imágenes fijas automáticamente
-            loadFixedImages();
-        });
-    </script>
-</body>
-</html>
+                ctx.textAlign = 'center
